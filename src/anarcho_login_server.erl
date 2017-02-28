@@ -20,12 +20,21 @@ loop(State) ->
     anarcho_login_server:loop(State).
 
 process_input(Socket) ->
+    io:format("got a conection~n"),
     {ok, Packet} = gen_tcp:recv(Socket, 0, ?RECV_TIMEOUT),
+    io:format("read packet ~w~n", [Packet]),
     [User, Pass] = binary:split(Packet, [<<0>>]),
     case anarcho_login_user:login_user(User, Pass) of
-        {ok, Token} -> gen_tcp:send(Socket, <<0, Token/binary>>);
-        {error, no_user} -> gen_tcp:send(Socket, <<1>>);
-        {error, invalid_password} -> gen_tcp:send(Socket, <<2>>)
+        {ok, Token} ->
+            io:format("logging in ~p~n", [User]),
+            io:format("sending token ~p~n", [Token]),
+            gen_tcp:send(Socket, <<0, Token/binary>>);
+        {error, no_user} ->
+            io:format("no such user ~p~n", [User]),
+            gen_tcp:send(Socket, <<1>>);
+        {error, invalid_password} ->
+            io:format("failed to log in ~p~n", [User]),
+            gen_tcp:send(Socket, <<2>>)
     end,
     gen_tcp:close(Socket),
     ok.
